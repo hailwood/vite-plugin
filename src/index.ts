@@ -120,7 +120,7 @@ export default function laravel(config: string|string[]|PluginConfig): LaravelPl
                 const isAddressInfo = (x: string|AddressInfo|null|undefined): x is AddressInfo => typeof x === 'object'
                 if (isAddressInfo(address)) {
                     const protocol = server.config.server.https ? 'https' : 'http'
-                    const host = address.family === 'IPv6' ? `[${address.address}]` : address.address
+                    const host = resolveHostname(server.config.server.host).name
                     viteDevServerUrl = `${protocol}://${host}:${address.port}`
                     fs.writeFileSync(hotFile, viteDevServerUrl)
 
@@ -296,6 +296,33 @@ function resolveManifestConfig(config: ResolvedConfig): string|false
     }
 
     return manifestConfig
+}
+
+/**
+ * Resolve the Vite hostname from the configuration.
+ */
+function resolveHostname(optionsHost) {
+    let host
+    if (optionsHost === undefined || optionsHost === false) {
+        // Use a secure default
+        host = '127.0.0.1'
+    }
+    else if (optionsHost === true) {
+        // If passed --host in the CLI without arguments
+        host = undefined // undefined typically means 0.0.0.0 or :: (listen on all IPs)
+    }
+    else {
+        host = optionsHost
+    }
+    // Set host name to localhost when possible, unless the user explicitly asked for '127.0.0.1'
+    const name = (optionsHost !== '127.0.0.1' && host === '127.0.0.1') ||
+    host === '0.0.0.0' ||
+    host === '::' ||
+    host === undefined
+      ? 'localhost'
+      : host
+
+    return { host, name }
 }
 
 /**
